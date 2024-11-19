@@ -160,7 +160,7 @@ export default function PlaceDetails() {
             key={slot.slotNo}
             onClick={() => displayFareFunction(slot)}
             className={`cursor-pointer flex justify-center items-center w-20 h-20 rounded-md text-white font-semibold p-1 ${
-              slot.parkingStatus ? "bg-red-400" : "bg-green-400"
+              slot.parkingStatus ? "bg-[#ff5a5a]" : "bg-green-400"
             }`}
           >
             <div className="flex flex-col items-center justify-evenly"><h1>{slot.slotNo}</h1>
