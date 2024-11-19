@@ -1,3 +1,4 @@
+import Navbar from "@/components/navbarComponent";
 import { useBooking } from "@/store/parkingSlotsData";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
@@ -6,119 +7,166 @@ import { useEffect, useState } from "react";
 export default function PlaceDetails() {
   const router = useRouter();
   const { place } = router.query;
-  const { getParticularPlaceData, setBookingSlot, 
-    closeBookingSlot } = useBooking();
+ 
+  const [parkingSlots, setParkingSlots] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedSlot, setSelectedSlot] = useState(null)
 
-  const [placeData, setPlaceData] = useState(null);
+  const [displayFareStatus, setDisplayStatus] = useState(null)
+  const [displayFareData, setDisplayFareData] = useState(null)
 
-  const [CloseBookingDetails, setCloseBookingDetails] = useState({
-    vehicleNo: "",
-  });
-  const [bookingDetails, setBookingDetails] = useState({
-    customerName: "",
-    vehicleNo: "",
-  });
-  const [selectedSlot, setSelectedSlot] = useState(null);
-  const [closeBookingData, setCloseBooking] = useState(null);
+  const [formInputs, setFormInputs] = useState({
+    customerName:"",
+    vehicleNo:""
+  })
 
-  const [fareDetails, setFareDetails] = useState(null)
+  const fetchParkingSlotById = async (id) => {
+    const response = await fetch('http://localhost:5000/api/parking/getById', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ id })  
+    });
+    
+    const data = await response.json();
+    setParkingSlots(data); 
+    setLoading(false);
+  };
 
   useEffect(() => {
-    if (place) {
-      const data = getParticularPlaceData(place);
-      setPlaceData(data);
-    }
-  }, [place, getParticularPlaceData]);
 
-  if (router.isFallback || !placeData) {
-    return <div>Loading...</div>;
-  }
+    fetchParkingSlotById(place);
+  }, [place]); 
 
-  const handleCloseBooking = (e) => {
-    e.preventDefault()
-    if(CloseBookingDetails.vehicleNo != closeBookingData.vehicleNo){
-        return alert("worng Vehicle No!")
+  const handleBookingSubmit = async (e) => {
+    e.preventDefault();
+  
+    const bookingData = {
+      slotId: selectedSlot._id, 
+      vehicleNo: formInputs.vehicleNo,
+      customerName: formInputs.customerName,
+      inTime: new Date().toLocaleTimeString(),
+      parkingStatus: true,  
+    };
+  
+    try {
+      const response = await fetch('http://localhost:5000/api/parking/bookSlot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookingData),
+      });
+  
+      const result = await response.json();
+  
+      if (response.ok) {
+        fetchParkingSlotById(place);
+        setSelectedSlot(null); 
+        setFormInputs({
+          customerName:"",
+          vehicleNo:""
+        })
+      } else {
+        console.error("Error booking slot:", result.message);
+      }
+    } catch (err) {
+      console.error("Booking request failed:", err);
     }
-   
+  };
+  
+  const displayFareFunction=(slot)=>{
     const closingTime = new Date().toLocaleTimeString(); 
-    const inTime = closeBookingData.inTime.split(":");
+    const inTime = slot.inTime.split(":");
     const outTime = closingTime.split(":");
   
     const inTimeTotalMinutes = parseInt(inTime[0]) * 60 + parseInt(inTime[1]);
     const outTimeTotalMinutes = parseInt(outTime[0]) * 60 + parseInt(outTime[1]);
-    
+
     const durationInMinutes = outTimeTotalMinutes - inTimeTotalMinutes;
  
-    const totalFare = durationInMinutes * placeData.price;
+    const totalFare = durationInMinutes * parkingSlots.price;
+    setDisplayFareData({outTime: new Date().toLocaleTimeString(),
+       TotalFare:totalFare,
+      slotId:slot._id,
+    minutes: durationInMinutes})
+    setDisplayStatus(true)
+  }
 
-  
+  const parkingCompleted = async () => {
+    const slot = parkingSlots.slots.find((s) => s._id === displayFareData.slotId);
     const bookingData = {
-      ...CloseBookingDetails,
-      parkingStatus: false, 
-      outTime: closingTime,
-      Totalfare: totalFare, 
+      _id: parkingSlots._id,        
+      slotId: slot._id,    
+      outTime: displayFareData.outTime, 
+      parkingStatus: false,         
+      TotalFare: displayFareData.TotalFare,   
     };
-   setFareDetails(bookingData)
-    setCloseBooking(null)
-    setCloseBookingDetails({
-        vehicleNo: "",
-      })
-    closeBookingSlot(placeData.name, closeBookingData.slotNo, bookingData); 
-    alert(`Booking closed. Total Fare: ₹${totalFare}`);
-  };
+
+    try {
+      const response = await fetch('http://localhost:5000/api/parking/closeParking', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookingData),
+      });
   
-  const handleBookingSubmit = (e) => {
-    e.preventDefault();
-    if (!bookingDetails.customerName || !bookingDetails.vehicleNo || selectedSlot === null) {
-      alert("Please fill all the fields.");
-      return;
+      const result = await response.json();
+  
+      if (response.ok) {
+        console.log( result.slot);
+        fetchParkingSlotById(place);
+        setSelectedSlot(null); 
+        setDisplayStatus(null)
+      } else {
+        console.error('Error updating slot:', result.message);
+      }
+    } catch (err) {
+      console.error('Parking update request failed:', err);
     }
-
-    const bookingData = {
-      slotNo: selectedSlot.slotNo,
-      parkingStatus: true,
-      vehicleNo: bookingDetails.vehicleNo,
-      customerName: bookingDetails.customerName,
-      inTime: new Date().toLocaleTimeString(), 
-      outTime: 0,
-      Totalfare: 0,
-    };
-
-    setPlaceData((prev) => ({
-      ...prev,
-      slots: prev.slots.map((slot) =>
-        slot.slotNo === selectedSlot.slotNo ? { ...slot, ...bookingData } : slot
-      ),
-    }));
-
-    setBookingSlot(placeData.name, selectedSlot.slotNo, bookingData); 
-    setSelectedSlot(null); 
-    setBookingDetails({ customerName: "", vehicleNo: "" }); 
   };
+  
+  if (!parkingSlots) {
+    return <p>Loading...</p>;
+  }
 
-
+  
 
   return (
-    <div className="p-8 relative z-0 flex flex-col gap-y-2 justify-center items-center">
-      <h1 className="text-3xl font-bold mb-4">Welcome to {placeData.name} Parking Place</h1>
-      <div className="flex justify-between gap-x-20"><p className="text-lg mb-2">Location: {placeData.location}</p>
-      <p className="text-lg mb-6">Price: {placeData.price} Pre Minutes</p></div>
+    <div>
+      <Navbar/>
+    <div className="p-8 relative capitalize min-h-[100vh] z-0 flex flex-col items-center text-center bg-gray-100 rounded-lg shadow-lg">
+      
+  <h1 className="text-2xl font-extrabold text-blue-600 mb-6">
+    Welcome to <span className="text-[30px] underline">{parkingSlots.name}</span> Parking Place
+  </h1>
+  <div className="flex flex-col sm:flex-row items-center sm:justify-between gap-4 sm:gap-x-20 text-lg text-gray-700 pb-4">
+    <p className="flex items-center gap-2">
+      <span className="font-semibold text-blue-900">Location:</span> {parkingSlots.location}
+    </p>
+    <p className="flex items-center gap-2">
+      <span className="font-semibold text-blue-900">Price:</span> {parkingSlots.price} Per Minute
+    </p>
+  </div>
 
       <div className="grid grid-cols-3 gap-4 ">
-        {placeData.slots.map((slot) => (
+        {parkingSlots && parkingSlots.slots && parkingSlots.slots.map((slot) => (
           <div>
             {slot.parkingStatus ? <div
             key={slot.slotNo}
-            onClick={() => setCloseBooking(slot)}
-            className={`cursor-pointer flex justify-center items-center w-16 h-16 rounded-md text-white font-semibold ${
+            onClick={() => displayFareFunction(slot)}
+            className={`cursor-pointer flex justify-center items-center w-20 h-20 rounded-md text-white font-semibold p-1 ${
               slot.parkingStatus ? "bg-red-400" : "bg-green-400"
             }`}
           >
-            {slot.slotNo}
+            <div className="flex flex-col items-center justify-evenly"><h1>{slot.slotNo}</h1>
+            <p className="text-[9px] p-2 bg-[white] text-red-400 text-center rounded-md">{slot.vehicleNo}</p></div>
           </div> : <div
             key={slot.slotNo}
             onClick={() => setSelectedSlot(slot)}
-            className={`cursor-pointer flex justify-center items-center w-16 h-16 rounded-md text-white font-semibold ${
+            className={`cursor-pointer flex justify-center items-center w-20 h-20 rounded-md text-white font-semibold ${
               slot.parkingStatus ? "bg-red-400" : "bg-green-400"
             }`}
           >
@@ -139,9 +187,9 @@ export default function PlaceDetails() {
               type="text"
               placeholder="Customer Name"
               className="border rounded-md p-2"
-              value={bookingDetails.customerName}
+              value={formInputs.customerName}
               onChange={(e) =>
-                setBookingDetails((prev) => ({
+                setFormInputs((prev) => ({
                   ...prev,
                   customerName: e.target.value,
                 }))
@@ -151,9 +199,9 @@ export default function PlaceDetails() {
               type="text"
               placeholder="Vehicle No"
               className="border rounded-md p-2"
-              value={bookingDetails.vehicleNo}
+              value={formInputs.vehicleNo}
               onChange={(e) =>
-                setBookingDetails((prev) => ({
+                setFormInputs((prev) => ({
                   ...prev,
                   vehicleNo: e.target.value,
                 }))
@@ -173,43 +221,45 @@ export default function PlaceDetails() {
             </div>
           </form>
         </div>
-      )}
+      )} 
 
-{closeBookingData  && (
-        <div className="absolute inset-0 bg-gray-900 bg-opacity-75 flex justify-center items-center z-10">
-          <form
-            onSubmit={handleCloseBooking}
-            className="bg-white p-6 rounded-md shadow-lg flex flex-col gap-4 w-96"
-          >
-            <h2 className="text-xl font-bold">Close Booking Slot {closeBookingData.slotNo}</h2>
-           <p>{fareDetails && fareDetails}</p>
-            <input
-              type="text"
-              placeholder="Vehicle No:"
-              className="border rounded-md p-2"
-              value={CloseBookingDetails.vehicleNo}
-              onChange={(e) =>
-                setCloseBookingDetails((prev) => ({
-                  ...prev,
-                  vehicleNo: e.target.value,
-                }))
-              }
-            />
-            <div className="flex gap-4">
-              <button
-                type="button"
-                className="bg-gray-500 text-white py-2 px-4 rounded-md"
-                onClick={() => setCloseBooking(null)}
-              >
-                Cancel
-              </button>
-              <button type="submit" className="bg-blue-500 text-white py-2 px-4 rounded-md">
-                Close Slot
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+{displayFareStatus && (
+  <div className="fixed inset-0 h-screen w-screen bg-gray-900 bg-opacity-75 flex justify-center items-center z-50">
+    <div className="bg-white rounded-lg shadow-lg p-8 w-[90%] max-w-lg text-center">
+      <h2 className="text-blue-600 font-bold text-2xl mb-4">
+        Total Parking Fare
+      </h2>
+      <p className="text-gray-800 text-xl mb-6">
+        Your total parking rent is: 
+        <span className="text-blue-500 font-semibold">
+          {displayFareData?.TotalFare}
+        </span>
+      </p>
+      <p className="text-gray-800 text-md mb-6">
+        Your total parking Minutes is: 
+        <span className="text-blue-500 font-semibold">
+          {displayFareData?.minutes} minutes
+        </span>
+      </p>
+      <div className="flex gap-4 justify-center">
+        <button
+          type="button"
+          className="bg-gray-500 hover:bg-gray-600 text-white py-2 px-6 rounded-md transition duration-300"
+          onClick={() => setDisplayStatus(null)}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={parkingCompleted}
+          className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-6 rounded-md transition duration-300"
+        >
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+    </div>
     </div>
   );
 }

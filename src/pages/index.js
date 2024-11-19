@@ -19,6 +19,10 @@ export default function Home() {
     <div>
       <Navbar/>
       <Banner/>
+      <footer className="bg-gradient-to-r from-blue-300 via-purple-400 to-blue-400 text-white text-center py-4">
+  <p>&copy; 2024 Sathish Dev. Thank you for visiting!.</p>
+</footer>
+
     </div>
   );
 }
