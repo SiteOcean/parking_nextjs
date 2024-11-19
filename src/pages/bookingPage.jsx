@@ -1,3 +1,4 @@
+import Loader from "@/components/loader";
 import Navbar from "@/components/navbarComponent";
 import { useBooking } from "@/store/parkingSlotsData";
 import Link from "next/link";
@@ -7,7 +8,7 @@ export default function BookingDashboard() {
   const [parkingSlots, setParkingSlots] = useState(null);
 
   async function fetchFun() {
-    const res = await fetch('http://localhost:5000/api/parking/');
+    const res = await fetch('https://parking-nodejs-server.onrender.com/api/parking/');
     const data = await res.json();
   
     if (res.ok) {
@@ -19,7 +20,7 @@ export default function BookingDashboard() {
     fetchFun();
   }, []);
 
-  if (!parkingSlots) return <div>Loading...</div>;
+  if (!parkingSlots) return <div><Loader/></div>;
 
   return (
     <div>

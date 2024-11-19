@@ -1,7 +1,9 @@
+import Loader from "@/components/loader";
 import Navbar from "@/components/navbarComponent";
 import { useBooking } from "@/store/parkingSlotsData";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import { MdOutlineCurrencyRupee } from "react-icons/md";
 
 
 export default function PlaceDetails() {
@@ -21,7 +23,7 @@ export default function PlaceDetails() {
   })
 
   const fetchParkingSlotById = async (id) => {
-    const response = await fetch('http://localhost:5000/api/parking/getById', {
+    const response = await fetch('https://parking-nodejs-server.onrender.com/api/parking/getById', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -49,9 +51,9 @@ export default function PlaceDetails() {
       inTime: new Date().toLocaleTimeString(),
       parkingStatus: true,  
     };
-  
+    setParkingSlots(null)
     try {
-      const response = await fetch('http://localhost:5000/api/parking/bookSlot', {
+      const response = await fetch('https://parking-nodejs-server.onrender.com/api/parking/bookSlot', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -103,9 +105,9 @@ export default function PlaceDetails() {
       parkingStatus: false,         
       TotalFare: displayFareData.TotalFare,   
     };
-
+    setParkingSlots(null)
     try {
-      const response = await fetch('http://localhost:5000/api/parking/closeParking', {
+      const response = await fetch('https://parking-nodejs-server.onrender.com/api/parking/closeParking', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +131,7 @@ export default function PlaceDetails() {
   };
   
   if (!parkingSlots) {
-    return <p>Loading...</p>;
+    return <Loader/>;
   }
 
   
@@ -144,10 +146,10 @@ export default function PlaceDetails() {
   </h1>
   <div className="flex flex-col sm:flex-row items-center sm:justify-between gap-4 sm:gap-x-20 text-lg text-gray-700 pb-4">
     <p className="flex items-center gap-2">
-      <span className="font-semibold text-blue-900">Location:</span> {parkingSlots.location}
+      <span className="font-bold text-blue-900">Location:</span> {parkingSlots.location}
     </p>
-    <p className="flex items-center gap-2">
-      <span className="font-semibold text-blue-900">Price:</span> {parkingSlots.price} Per Minute
+    <p className="flex items-center gap-1 underline underline-offset-2">
+      <span className="font-bold text-blue-900 underline  underline-offset-2">Price:</span><span className="flex items-center underline text-[#34ac34]"> {parkingSlots.price}<MdOutlineCurrencyRupee className="text-[#34ac34]"/>Per Minute</span> 
     </p>
   </div>
 
