@@ -1,5 +1,8 @@
+import DisplayFareCard from "@/components/displayFareCard";
 import Loader from "@/components/loader";
 import Navbar from "@/components/navbarComponent";
+import ParkingSlotCard from "@/components/parkingSlotCard";
+import { fetchAPI } from "@/services/handleApis";
 import { useBooking } from "@/store/parkingSlotsData";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
@@ -37,7 +40,7 @@ export default function PlaceDetails() {
   };
 
   useEffect(() => {
-
+    if(!place) return
     fetchParkingSlotById(place);
   }, [place]); 
 
@@ -107,17 +110,11 @@ export default function PlaceDetails() {
     };
     setParkingSlots(null)
     try {
-      const response = await fetch('https://parking-nodejs-server.onrender.com/api/parking/closeParking', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(bookingData),
-      });
+     
   
-      const result = await response.json();
+      const result = await fetchAPI("closeParking", bookingData);
   
-      if (response.ok) {
+      if (result) {
         console.log( result.slot);
         fetchParkingSlotById(place);
         setSelectedSlot(null); 
@@ -154,27 +151,8 @@ export default function PlaceDetails() {
   </div>
 
       <div className="grid grid-cols-3 gap-4 ">
-        {parkingSlots && parkingSlots.slots && parkingSlots.slots.map((slot) => (
-          <div>
-            {slot.parkingStatus ? <div
-            key={slot.slotNo}
-            onClick={() => displayFareFunction(slot)}
-            className={`cursor-pointer flex justify-center items-center w-20 h-20 rounded-md text-white font-semibold p-1 ${
-              slot.parkingStatus ? "bg-[#ff5a5a]" : "bg-green-400"
-            }`}
-          >
-            <div className="flex flex-col items-center justify-evenly"><h1>{slot.slotNo}</h1>
-            <p className="text-[9px] p-2 bg-[white] text-red-400 text-center rounded-md">{slot.vehicleNo}</p></div>
-          </div> : <div
-            key={slot.slotNo}
-            onClick={() => setSelectedSlot(slot)}
-            className={`cursor-pointer flex justify-center items-center w-20 h-20 rounded-md text-white font-semibold ${
-              slot.parkingStatus ? "bg-red-400" : "bg-green-400"
-            }`}
-          >
-            {slot.slotNo}
-          </div>}
-          </div>
+        {parkingSlots && parkingSlots.slots && parkingSlots.slots.map((slot, i) => (
+        <ParkingSlotCard key={i} slot={slot} displayFareFunction={displayFareFunction} setSelectedSlot={setSelectedSlot}/>
         ))}
       </div>
 
@@ -225,42 +203,9 @@ export default function PlaceDetails() {
         </div>
       )} 
 
-{displayFareStatus && (
-  <div className="fixed inset-0 h-screen w-screen bg-gray-900 bg-opacity-75 flex justify-center items-center z-50">
-    <div className="bg-white rounded-lg shadow-lg p-8 w-[90%] max-w-lg text-center">
-      <h2 className="text-blue-600 font-bold text-2xl mb-4">
-        Total Parking Fare
-      </h2>
-      <p className="text-gray-800 text-xl mb-6">
-        Your total parking rent is: 
-        <span className="text-blue-500 font-semibold">
-          {displayFareData?.TotalFare}
-        </span>
-      </p>
-      <p className="text-gray-800 text-md mb-6">
-        Your total parking Minutes is: 
-        <span className="text-blue-500 font-semibold">
-          {displayFareData?.minutes} minutes
-        </span>
-      </p>
-      <div className="flex gap-4 justify-center">
-        <button
-          type="button"
-          className="bg-gray-500 hover:bg-gray-600 text-white py-2 px-6 rounded-md transition duration-300"
-          onClick={() => setDisplayStatus(null)}
-        >
-          Cancel
-        </button>
-        <button
-          onClick={parkingCompleted}
-          className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-6 rounded-md transition duration-300"
-        >
-          Confirm
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+      {displayFareStatus && (
+            <DisplayFareCard displayFareData={displayFareData} setDisplayStatus={setDisplayStatus} parkingCompleted={parkingCompleted}/>
+      )}
     </div>
     </div>
   );

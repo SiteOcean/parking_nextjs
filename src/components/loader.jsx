@@ -1,6 +1,5 @@
 import Navbar from "./navbarComponent";
 
-// components/Loader.js
 export default function Loader() {
     return (
       <div>
